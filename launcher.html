@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>artiomyo projects</title>
+    <style>
+        :root {
+            --bg-deep: #030305;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.06);
+            --glass-highlight: rgba(255, 255, 255, 0.12);
+            --text-primary: #fafafa;
+            --text-secondary: #8a8f98;
+            --accent: #8b5cf6;
+            --accent-glow: rgba(139, 92, 246, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            position: relative;
+        }
+
+        .ambient-bg {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            background:
+                radial-gradient(circle at 20% 30%, rgba(139, 92, 246, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(59, 130, 246, 0.10) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.04) 0%, transparent 60%);
+            animation: ambientPulse 8s ease-in-out infinite;
+        }
+
+        @keyframes ambientPulse {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.08); }
+        }
+
+        .transition-veil {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.42s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .transition-veil.active { opacity: 1; }
+
+        /* ==========================================
+           INTRO
+           ========================================== */
+        .intro-overlay {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01)), var(--bg-deep);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+            cursor: grab;
+            user-select: none;
+            will-change: transform, opacity;
+        }
+
+        .intro-overlay.dragging { cursor: grabbing; }
+        .intro-overlay.returning {
+            transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .intro-overlay.hidden { display: none; }
+
+        .intro-logo {
+            margin-bottom: 56px;
+            opacity: 0;
+            animation: fadeIn 1s ease 0.3s forwards;
+        }
+
+        .intro-logo svg {
+            width: min(220px, 62vw);
+            height: auto;
+            filter: drop-shadow(0 0 25px rgba(139, 92, 246, 0.4));
+        }
+
+        .intro-logo text { fill: url(#introLogoGrad); }
+
+        .listing-container {
+            max-width: 340px;
+            padding: 0 20px;
+            opacity: 0;
+            animation: fadeIn 1s ease 0.8s forwards;
+        }
+
+        .listing-line {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            text-align: center;
+            line-height: 1.7;
+            margin: 14px 0;
+            opacity: 0;
+            transform: translateY(15px);
+            animation: slideUpFade 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        .listing-line:nth-child(1) { animation-delay: 1s; }
+        .listing-line:nth-child(2) { animation-delay: 1.55s; }
+        .listing-line:nth-child(3) { animation-delay: 2.1s; color: var(--text-secondary); font-style: italic; }
+
+        @keyframes slideUpFade { to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        .swipe-hint {
+            position: absolute;
+            bottom: 23vh;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 14px 26px;
+            border-radius: 99px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            opacity: 0;
+            animation: hintAppear 1.1s cubic-bezier(0.22, 1, 0.36, 1) 2.5s forwards;
+            pointer-events: none;
+            box-shadow: 0 0 32px rgba(139, 92, 246, 0.13);
+        }
+
+        .swipe-hint::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: inherit;
+            background: radial-gradient(circle at 30% 50%, rgba(139, 92, 246, 0.18), transparent 65%);
+            filter: blur(12px);
+            z-index: -1;
+            animation: hintGlow 3.2s ease-in-out infinite;
+        }
+
+        .swipe-text {
+            background: linear-gradient(90deg, rgba(250, 250, 250, 0.35) 0%, rgba(250, 250, 250, 0.35) 35%, #ffffff 50%, rgba(250, 250, 250, 0.35) 65%, rgba(250, 250, 250, 0.35) 100%);
+            background-size: 220% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: textShimmer 2.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+        }
+
+        @keyframes hintAppear {
+            from { opacity: 0; transform: translateX(-50%) translateY(18px) scale(0.94); filter: blur(5px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); filter: blur(0); }
+        }
+        @keyframes hintGlow { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+        @keyframes textShimmer { 0% { background-position: -120% 0; } 100% { background-position: 120% 0; } }
+
+        /* ==========================================
+           МЕНЮ
+           ========================================== */
+        .main-interface {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            padding: max(24px, env(safe-area-inset-top)) 16px max(36px, env(safe-area-inset-bottom));
+            opacity: 0;
+            transform: scale(0.985);
+            transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+            pointer-events: none;
+        }
+
+        .main-interface.visible { opacity: 1; transform: scale(1); pointer-events: auto; }
+
+        .header-logo {
+            text-align: center;
+            margin-bottom: 28px;
+            opacity: 0;
+            animation: fadeIn 1s ease 0.15s forwards;
+        }
+
+        .header-logo svg {
+            width: min(200px, 54vw);
+            height: auto;
+            filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.4));
+        }
+
+        .categories-wrapper {
+            position: relative;
+            max-width: 400px;
+            width: 100%;
+            margin: 0 auto 28px;
+            opacity: 0;
+            animation: fadeIn 1s ease 0.3s forwards;
+        }
+
+        .categories {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 2;
+        }
+
+        .category-btn {
+            position: relative;
+            padding: 12px 24px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 99px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+            backdrop-filter: blur(8px);
+            overflow: hidden;
+        }
+
+        .category-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(255, 255, 255, 0.07));
+            opacity: 0;
+            transition: opacity 0.45s ease;
+            z-index: -1;
+        }
+
+        .category-btn.active {
+            color: var(--text-primary);
+            border-color: var(--glass-highlight);
+            transform: scale(1.05);
+        }
+
+        .category-btn.active::before { opacity: 1; }
+
+        .category-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 120px;
+            height: 44px;
+            background: radial-gradient(ellipse, var(--accent-glow) 0%, transparent 70%);
+            filter: blur(20px);
+            opacity: 0;
+            transition: all 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .category-glow.visible { opacity: 0.6; }
+
+        /* ==========================================
+           ГОРИЗОНТАЛЬНАЯ КАРУСЕЛЬ
+           ========================================== */
+        .projects-grid {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+            position: relative;
+            touch-action: none;
+        }
+
+        .project-card {
+            width: min(430px, 100%);
+            max-height: 100%;
+            overflow: auto;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 28px 24px;
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            will-change: transform, opacity, filter;
+        }
+
+        .project-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        }
+
+        .project-card::after {
+            content: '';
+            position: absolute;
+            inset: -50px;
+            background: radial-gradient(circle at 50% 15%, rgba(139, 92, 246, 0.13), transparent 60%);
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.7s ease;
+            pointer-events: none;
+        }
+
+        .project-card.visible::after { opacity: 1; }
+
+        .project-card.enter-from-right { animation: cardEnterFromRight 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .project-card.enter-from-left { animation: cardEnterFromLeft 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .project-card.exit-to-left { animation: cardExitToLeft 0.35s cubic-bezier(0.4, 0, 1, 1) both; }
+        .project-card.exit-to-right { animation: cardExitToRight 0.35s cubic-bezier(0.4, 0, 1, 1) both; }
+
+        @keyframes cardEnterFromRight { from { opacity: 0; transform: translateX(70px) scale(0.965); filter: blur(7px); } to { opacity: 1; transform: translateX(0) scale(1); filter: blur(0); } }
+        @keyframes cardEnterFromLeft { from { opacity: 0; transform: translateX(-70px) scale(0.965); filter: blur(7px); } to { opacity: 1; transform: translateX(0) scale(1); filter: blur(0); } }
+        @keyframes cardExitToLeft { to { opacity: 0; transform: translateX(-70px) scale(0.955); filter: blur(6px); } }
+        @keyframes cardExitToRight { to { opacity: 0; transform: translateX(70px) scale(0.955); filter: blur(6px); } }
+
+        .project-card:hover {
+            border-color: var(--glass-highlight);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6), 0 0 30px var(--accent-glow);
+        }
+
+        .project-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .project-card:active .project-icon { transform: scale(0.95) rotate(-5deg); }
+
+        .project-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 10px; letter-spacing: -0.3px; }
+        .project-desc { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 24px; flex-grow: 1; }
+
+        .project-actions { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+
+        .btn {
+            width: 100%;
+            padding: 14px 20px;
+            border-radius: 14px;
+            border: none;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.18), rgba(255, 255, 255, 0.04));
+            border: 1px solid rgba(139, 92, 246, 0.38);
+            color: var(--text-primary);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 0 22px rgba(139, 92, 246, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.28), rgba(255, 255, 255, 0.07));
+            border-color: rgba(139, 92, 246, 0.6);
+            box-shadow: 0 0 34px rgba(139, 92, 246, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:active { transform: scale(0.98); }
+
+        .btn-primary .btn-fill {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.55), rgba(165, 180, 252, 0.35));
+            transform: scaleX(0);
+            transform-origin: left center;
+            transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+            z-index: 0;
+        }
+
+        .btn-primary.launching .btn-fill { transform: scaleX(1); }
+        .btn-primary.launching {
+            border-color: rgba(165, 180, 252, 0.75);
+            box-shadow: 0 0 48px rgba(139, 92, 246, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+        }
+        .btn-primary span { position: relative; z-index: 1; }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--glass-highlight);
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .launch-fade {
+            opacity: 0 !important;
+            transform: scale(0.975) !important;
+            filter: blur(7px) !important;
+            pointer-events: none !important;
+            transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1), transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), filter 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .launch-keep {
+            opacity: 1 !important;
+            transform: none !important;
+            filter: none !important;
+            pointer-events: auto !important;
+            z-index: 50;
+        }
+
+        .dots { flex: 0 0 auto; display: flex; justify-content: center; gap: 8px; padding-top: 20px; }
+
+        .dot {
+            width: 7px;
+            height: 7px;
+            border: none;
+            border-radius: 99px;
+            background: rgba(255, 255, 255, 0.18);
+            cursor: pointer;
+            transition: all 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .dot.active {
+            width: 24px;
+            background: linear-gradient(90deg, #ffffff, rgba(165, 180, 252, 0.9));
+            box-shadow: 0 0 14px rgba(255, 255, 255, 0.22);
+        }
+
+        /* ==========================================
+           МОДАЛЬНОЕ ОКНО ОБРАТНОЙ СВЯЗИ
+           ========================================== */
+        .feedback-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .feedback-modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .feedback-modal {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 32px 28px;
+            max-width: 380px;
+            width: 100%;
+            text-align: center;
+            transform: scale(0.9) translateY(20px);
+            transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        }
+
+        .feedback-modal-overlay.active .feedback-modal {
+            transform: scale(1) translateY(0);
+        }
+
+        .feedback-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .feedback-project {
+            color: var(--accent);
+            font-weight: 500;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+        }
+
+        .feedback-text {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .feedback-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px;
+            margin-bottom: 12px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .feedback-link:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .feedback-link.tg {
+            color: #60a5fa;
+        }
+
+        .feedback-link.tg:hover {
+            border-color: #60a5fa;
+            background: rgba(96, 165, 250, 0.08);
+        }
+
+        .feedback-close {
+            margin-top: 16px;
+            padding: 12px 32px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            border-radius: 99px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .feedback-close:hover {
+            color: var(--text-primary);
+            border-color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-bg"></div>
+    <div class="transition-veil" id="transitionVeil"></div>
+
+    <!-- INTRO -->
+    <div class="intro-overlay" id="introOverlay">
+        <div class="intro-logo">
+            <svg viewBox="0 0 220 63" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="introLogoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#a5b4fc;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#fafafa;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                <text x="110" y="45" font-family="system-ui, -apple-system, sans-serif" font-size="36" font-weight="700" text-anchor="middle" letter-spacing="-0.5">от меня</text>
+            </svg>
+        </div>
+
+        <div class="listing-container">
+            <div class="listing-line">Делаю проекты из творческих идей, не дающих покоя</div>
+            <div class="listing-line">Часто это сырая проба, но если проект тебе интересен</div>
+            <div class="listing-line">Напиши или оставь отзыв — и я продолжу вкладывать в него душу</div>
+        </div>
+
+        <div class="swipe-hint">
+            <span class="swipe-text">Свайпни влево</span>
+        </div>
+    </div>
+
+    <!-- МЕНЮ -->
+    <div class="main-interface" id="mainInterface">
+        <header class="header-logo">
+            <svg viewBox="0 0 200 57" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="headerLogoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#fafafa;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#a5b4fc;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                <text x="100" y="42" font-family="system-ui, -apple-system, sans-serif" font-size="26" font-weight="700" fill="url(#headerLogoGrad)" text-anchor="middle" letter-spacing="-0.5">artiomyo projects</text>
+            </svg>
+        </header>
+
+        <div class="categories-wrapper">
+            <div class="category-glow" id="categoryGlow"></div>
+            <nav class="categories" id="categoriesNav"></nav>
+        </div>
+
+        <main class="projects-grid" id="projectsGrid"></main>
+        <div class="dots" id="dots"></div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО ОБРАТНОЙ СВЯЗИ -->
+    <div class="feedback-modal-overlay" id="feedbackModal">
+        <div class="feedback-modal" onclick="event.stopPropagation()">
+            <h3 class="feedback-title">Обратная связь</h3>
+            <p class="feedback-project" id="feedbackProjectName"></p>
+            <p class="feedback-text">
+                Все отзывы, идеи и обратная связь с радостью принимаются напрямую. Напиши мне, и я обязательно отвечу!
+            </p>
+            
+            <a href="mailto:stoliarow.art@gmail.com" class="feedback-link">
+                ✉️ stoliarow.art@gmail.com
+            </a>
+            
+            <a href="https://t.me/Artiomyo" target="_blank" rel="noopener noreferrer" class="feedback-link tg">
+                ✈️ Написать в Telegram (@Artiomyo)
+            </a>
+
+            <button class="feedback-close" onclick="closeFeedbackModal()">Закрыть</button>
+        </div>
+    </div>
+
+    <script>
+        const categories = [
+            { id: "games", name: "Игры" },
+            { id: "apps", name: "Приложения" },
+            { id: "experiments", name: "Эксперименты" }
+        ];
+
+        const projects = [
+            { id: "greedyteather", title: "Жлоб учитель", category: "games", description: "Игра о жадном учителе 💸 Перехитри систему и разбогатей на детях 😈", url: "https://ingram5.github.io/Greedyteather/Greedyteather.html", icon: "🎒" },
+            { id: "sudoka", title: "Sudoka", category: "games", description: "Классическая судоку?🤓 А нет. Чит режимы и новый взгляд на классику 🔥", url: "https://ingram5.github.io/sudoka/sudoka.html", icon: "✏️" },
+            { id: "qoridor", title: "Qoridor", category: "games", description: "Стратегическая игра с лабиринтами 🧩 Твой пупуть к победе - тупик для соперника ⚔️", url: "https://ingram5.github.io/qoridor/qoridor.html", icon: "🧩" },
+            { id: "snaketris", title: "SnakeTris", category: "games", description: "Змейка встретилась с Тетрисом 🤪 Гибрид, который ты не ожидал 😅", url: "https://ingram5.github.io/SnakeTris/", icon: "🐍" },
+            { id: "cuetris", title: "Cuetris", category: "games", description: "Тетрис + бильярд 🎳 Неожиданно, затягивающе, гениально ☝️", url: "https://ingram5.github.io/cuetris/", icon: "🎱" },
+            { id: "html-editor", title: "HTML Editor", category: "apps", description: "Простой редактор для быстрой правки HTML. Прямо в браузере.", url: "https://ingram5.github.io/HTML-editor-/", icon: "👨‍🎨" }
+        ];
+
+        let currentCategory = "games";
+        let currentIndex = 0;
+        let entered = false;
+        let launching = false;
+
+        const introOverlay = document.getElementById('introOverlay');
+        const mainInterface = document.getElementById('mainInterface');
+        const categoriesNav = document.getElementById('categoriesNav');
+        const projectsGrid = document.getElementById('projectsGrid');
+        const categoryGlow = document.getElementById('categoryGlow');
+        const dots = document.getElementById('dots');
+        const transitionVeil = document.getElementById('transitionVeil');
+        const feedbackModal = document.getElementById('feedbackModal');
+        const feedbackProjectName = document.getElementById('feedbackProjectName');
+
+        /* ==========================================
+           INTRO: перетаскивание
+           ========================================== */
+        let introDragging = false, introStartX = 0, introStartY = 0, introCurrentX = 0, introAxis = null;
+
+        introOverlay.addEventListener('pointerdown', e => {
+            if (introOverlay.classList.contains('hidden')) return;
+            introDragging = true; introAxis = null; introStartX = e.clientX; introStartY = e.clientY; introCurrentX = 0;
+            introOverlay.classList.add('dragging'); introOverlay.classList.remove('returning');
+            introOverlay.setPointerCapture(e.pointerId);
+        });
+
+        introOverlay.addEventListener('pointermove', e => {
+            if (!introDragging) return;
+            const dx = e.clientX - introStartX;
+            const dy = e.clientY - introStartY;
+            if (!introAxis && (Math.abs(dx) > 7 || Math.abs(dy) > 7)) introAxis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+            if (introAxis !== 'x') return;
+            introCurrentX = dx < 0 ? dx : dx * 0.22;
+            const progress = Math.min(1, Math.abs(introCurrentX) / (window.innerWidth * 0.55));
+            const rotate = introCurrentX / 30;
+            const scale = 1 - progress * 0.04;
+            introOverlay.style.transform = `translateX(${introCurrentX}px) rotate(${rotate}deg) scale(${scale})`;
+            introOverlay.style.opacity = String(1 - progress * 0.35);
+        });
+
+        function endIntroDrag() {
+            if (!introDragging) return;
+            introDragging = false; introOverlay.classList.remove('dragging');
+            const threshold = Math.min(130, window.innerWidth * 0.2);
+            if (introCurrentX < -threshold) { enterMain(); } 
+            else {
+                introOverlay.classList.add('returning'); introOverlay.style.transform = ''; introOverlay.style.opacity = '';
+                setTimeout(() => introOverlay.classList.remove('returning'), 520);
+            }
+            introCurrentX = 0;
+        }
+
+        introOverlay.addEventListener('pointerup', endIntroDrag);
+        introOverlay.addEventListener('pointercancel', endIntroDrag);
+
+        function enterMain() {
+            if (entered) return; entered = true;
+            transitionVeil.classList.add('active');
+            setTimeout(() => {
+                introOverlay.classList.add('hidden'); introOverlay.style.transform = ''; introOverlay.style.opacity = '';
+                mainInterface.classList.add('visible');
+                renderCategories(); renderProjects('enter-from-right'); updateCategoryGlow();
+                setTimeout(() => { transitionVeil.classList.remove('active'); introOverlay.remove(); }, 120);
+            }, 430);
+        }
+
+        /* ==========================================
+           КАТЕГОРИИ
+           ========================================== */
+        function renderCategories() {
+            categoriesNav.innerHTML = '';
+            categories.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = `category-btn ${cat.id === currentCategory ? 'active' : ''}`;
+                btn.textContent = cat.name;
+                btn.onclick = () => switchCategory(cat.id);
+                categoriesNav.appendChild(btn);
+            });
+        }
+
+        function switchCategory(categoryId) {
+            if (categoryId === currentCategory) return;
+            currentCategory = categoryId; currentIndex = 0;
+            const cards = projectsGrid.querySelectorAll('.project-card');
+            cards.forEach(card => { card.classList.remove('visible', 'enter-from-right', 'enter-from-left'); card.classList.add('exit-to-left'); });
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent === categories.find(c => c.id === categoryId).name) btn.classList.add('active');
+            });
+            updateCategoryGlow();
+            setTimeout(() => renderProjects('enter-from-right'), 300);
+        }
+
+        function updateCategoryGlow() {
+            const activeBtn = categoriesNav.querySelector('.category-btn.active');
+            if (activeBtn) {
+                categoryGlow.style.width = `${activeBtn.offsetWidth + 20}px`;
+                categoryGlow.style.left = `${activeBtn.offsetLeft + activeBtn.offsetWidth / 2}px`;
+                categoryGlow.classList.add('visible');
+            }
+        }
+
+        /* ==========================================
+           КАРУСЕЛЬ ИГР
+           ========================================== */
+        function getFilteredProjects() { return projects.filter(p => p.category === currentCategory); }
+
+        function renderProjects(enterClass = 'enter-from-right') {
+            projectsGrid.innerHTML = ''; dots.innerHTML = '';
+            const filtered = getFilteredProjects();
+
+            if (filtered.length === 0) {
+                projectsGrid.innerHTML = `<div class="project-card visible ${enterClass}"><div class="project-icon">✨</div><h3 class="project-title">Пока тихо</h3><p class="project-desc">В этой категории идеи уже рождаются...</p></div>`;
+                return;
+            }
+
+            currentIndex = ((currentIndex % filtered.length) + filtered.length) % filtered.length;
+            const project = filtered[currentIndex];
+
+            const card = document.createElement('div');
+            card.className = `project-card visible ${enterClass}`;
+            card.innerHTML = `
+                <div class="project-icon">${project.icon}</div>
+                <h3 class="project-title">${project.title}</h3>
+                <p class="project-desc">${project.description}</p>
+                <div class="project-actions">
+                    <button class="btn btn-primary" data-url="${project.url}">
+                        <span class="btn-fill"></span><span>▶ Запустить</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="openFeedbackModal('${project.title}')">
+                        💬 Откликнуться
+                    </button>
+                </div>
+            `;
+
+            card.querySelector('[data-url]').addEventListener('click', launchProject);
+            projectsGrid.appendChild(card);
+
+            filtered.forEach((_, index) => {
+                const dot = document.createElement('button');
+                dot.className = `dot ${index === currentIndex ? 'active' : ''}`;
+                dot.setAttribute('aria-label', `Проект ${index + 1}`);
+                dot.onclick = () => goToProject(index, index > currentIndex ? 'next' : 'prev');
+                dots.appendChild(dot);
+            });
+        }
+
+        function goToProject(index, direction) {
+            const filtered = getFilteredProjects();
+            if (filtered.length === 0) return;
+            index = ((index % filtered.length) + filtered.length) % filtered.length;
+            if (index === currentIndex) return;
+            const goingNext = direction === 'next';
+            const oldCard = projectsGrid.querySelector('.project-card');
+            currentIndex = index;
+            if (oldCard) {
+                oldCard.classList.remove('visible', 'enter-from-right', 'enter-from-left');
+                oldCard.classList.add(goingNext ? 'exit-to-left' : 'exit-to-right');
+                setTimeout(() => renderProjects(goingNext ? 'enter-from-right' : 'enter-from-left'), 300);
+            } else {
+                renderProjects(goingNext ? 'enter-from-right' : 'enter-from-left');
+            }
+        }
+
+        let carouselStartX = 0, carouselStartY = 0, carouselActive = false;
+        projectsGrid.addEventListener('pointerdown', e => { carouselStartX = e.clientX; carouselStartY = e.clientY; carouselActive = true; });
+        projectsGrid.addEventListener('pointerup', e => {
+            if (!carouselActive) return; carouselActive = false;
+            const dx = carouselStartX - e.clientX;
+            const dy = carouselStartY - e.clientY;
+            if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+            if (dx > 0) { goToProject(currentIndex + 1, 'next'); } else { goToProject(currentIndex - 1, 'prev'); }
+        });
+        projectsGrid.addEventListener('pointercancel', () => { carouselActive = false; });
+        projectsGrid.addEventListener('wheel', e => {
+            if (Math.abs(e.deltaY) < 20) return;
+            goToProject(currentIndex + (e.deltaY > 0 ? 1 : -1), e.deltaY > 0 ? 'next' : 'prev');
+        }, { passive: true });
+
+        /* ==========================================
+           ЗАПУСК ИГРЫ И ОБРАТНАЯ СВЯЗЬ
+           ========================================== */
+        function launchProject(event) {
+            if (launching) return; launching = true;
+            const button = event.currentTarget;
+            const url = button.dataset.url;
+            button.classList.add('launching');
+            const header = document.querySelector('.header-logo');
+            const categoriesWrapper = document.querySelector('.categories-wrapper');
+            const dotsBlock = document.getElementById('dots');
+
+            setTimeout(() => {
+                header.classList.add('launch-fade'); categoriesWrapper.classList.add('launch-fade'); dotsBlock.classList.add('launch-fade'); button.classList.add('launch-keep');
+            }, 280);
+            setTimeout(() => { window.open(url, '_blank', 'noopener,noreferrer'); }, 750);
+            setTimeout(() => {
+                button.classList.remove('launching', 'launch-keep');
+                header.classList.remove('launch-fade'); categoriesWrapper.classList.remove('launch-fade'); dotsBlock.classList.remove('launch-fade');
+                launching = false;
+            }, 1200);
+        }
+
+        function openFeedbackModal(projectTitle) {
+            feedbackProjectName.textContent = `Проект: ${projectTitle}`;
+            feedbackModal.classList.add('active');
+        }
+
+        function closeFeedbackModal() {
+            feedbackModal.classList.remove('active');
+        }
+
+        // Закрытие по клику на затемненный фон
+        feedbackModal.addEventListener('click', closeFeedbackModal);
+
+        window.addEventListener('resize', updateCategoryGlow);
+    </script>
+</body>
+</html>
